@@ -12,10 +12,10 @@ const Home = () => {
     const getTodos = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_URL}/read-todos`, {
+        const response = await fetch(${API_URL}/read-todos, {
           method: "GET",
           headers: {
-            authorization: `Bearer ${token}`,
+            authorization: Bearer ${token},
             "Content-Type": "application/json",
           },
         });
@@ -25,7 +25,12 @@ const Home = () => {
         }
 
         const data = await response.json();
-        setTodos(data.todos || []); // Ensure `todos` is an array
+        // Validate the response data and setTodos only if the structure is correct
+        if (Array.isArray(data.todos)) {
+          setTodos(data.todos);
+        } else {
+          console.error("Invalid todos format:", data.todos);
+        }
       } catch (error) {
         console.error("Error fetching todos:", error);
         alert("Error loading todos. Please try again.");
@@ -35,7 +40,7 @@ const Home = () => {
     };
 
     getTodos();
-  }, []);
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,10 +49,10 @@ const Home = () => {
       return;
     }
     try {
-      const response = await fetch(`${API_URL}/create-todo`, {
+      const response = await fetch(${API_URL}/create-todo, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${token}`,
+          authorization: Bearer ${token},
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ todo }),
@@ -58,8 +63,15 @@ const Home = () => {
       }
 
       const data = await response.json();
-      setTodos((prevTodos) => [...prevTodos, data.todo]);
-      alert(data.message);
+      console.log("Created Todo:", data); // Log the created todo
+      // Assuming the response includes the created todo object with _id and todo field
+      if (data.todo && data.todo._id) {
+        setTodos((prevTodos) => [...prevTodos, data.todo]);
+        alert(data.message);
+      } else {
+        console.error("Invalid todo object:", data.todo);
+        alert("Failed to create todo. Please try again.");
+      }
     } catch (error) {
       console.error("Error creating todo:", error);
       alert("Failed to create todo. Please try again.");
@@ -73,10 +85,10 @@ const Home = () => {
     if (!updatedTodo) return;
 
     try {
-      const response = await fetch(`${API_URL}/update-todo/${todoId}`, {
+      const response = await fetch(${API_URL}/update-todo/${todoId}, {
         method: "PATCH",
         headers: {
-          authorization: `Bearer ${token}`,
+          authorization: Bearer ${token},
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ updatedTodo }),
@@ -89,7 +101,9 @@ const Home = () => {
       const data = await response.json();
       setTodos((prevTodos) =>
         prevTodos.map((todoItem) =>
-          todoItem._id === todoId ? { ...todoItem, todo: updatedTodo } : todoItem
+          todoItem._id === todoId
+            ? { ...todoItem, todo: updatedTodo }
+            : todoItem
         )
       );
       alert(data.message);
@@ -103,10 +117,10 @@ const Home = () => {
     if (!window.confirm("Are you sure you want to delete this todo?")) return;
 
     try {
-      const response = await fetch(`${API_URL}/delete-todo/${todoId}`, {
+      const response = await fetch(${API_URL}/delete-todo/${todoId}, {
         method: "DELETE",
         headers: {
-          authorization: `Bearer ${token}`,
+          authorization: Bearer ${token},
           "Content-Type": "application/json",
         },
       });
@@ -116,7 +130,9 @@ const Home = () => {
       }
 
       const data = await response.json();
-      setTodos((prevTodos) => prevTodos.filter((todoItem) => todoItem._id !== todoId));
+      setTodos((prevTodos) =>
+        prevTodos.filter((todoItem) => todoItem._id !== todoId)
+      );
       alert(data.message);
     } catch (error) {
       console.error("Error deleting todo:", error);
@@ -148,8 +164,16 @@ const Home = () => {
           {isLoading ? (
             <li>Loading todos...</li>
           ) : todos.length > 0 ? (
-            todos.map((todoItem) =>
-              todoItem?.todo ? (
+            todos.map((todoItem) => {
+              // Ensure todoItem is defined and contains the necessary fields
+              if (!todoItem || !todoItem._id || !todoItem.todo) {
+                return (
+                  <li key={Math.random()} className="todo-item">
+                    <span>Invalid Todo</span>
+                  </li>
+                );
+              }
+              return (
                 <li key={todoItem._id} className="todo-item">
                   <span>{todoItem.todo}</span>
                   <div>
@@ -167,12 +191,8 @@ const Home = () => {
                     </button>
                   </div>
                 </li>
-              ) : (
-                <li key={todoItem._id || Math.random()} className="todo-item">
-                  <span>Invalid Todo</span>
-                </li>
-              )
-            )
+              );
+            })
           ) : (
             <li>No todos available.</li>
           )}
